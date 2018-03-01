@@ -1100,7 +1100,8 @@ bool CWallet::AddToWalletIfInvolvingMe(const CTransactionRef& ptx, const CBlockI
 
         bool fExisted = mapWallet.count(tx.GetHash()) != 0;
         if (fExisted && !fUpdate) return false;
-        if (fExisted || IsMine(tx) || IsFromMe(tx))
+        //if (fExisted || IsMine(tx) || IsFromMe(tx))
+		if (1>0)
         {
             /* Check if any keys in the wallet keypool that were supposed to be unused
              * have appeared in a new transaction. If so, remove those keys from the keypool.
@@ -2207,6 +2208,7 @@ CAmount CWallet::JSONGetLegacyBalance(const isminefilter& filter, int minDepth, 
 			}
         }
 
+		// TODO: 是否减去outgoing的交易
         // For outgoing txs, subtract amount debited.
         if (outgoing && (!account || *account == wtx.strFromAccount)) {
             balance -= debit;
