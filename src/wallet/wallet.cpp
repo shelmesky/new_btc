@@ -2160,6 +2160,66 @@ CAmount CWallet::GetLegacyBalance(const isminefilter& filter, int minDepth, cons
     return balance;
 }
 
+// Calculate total balance in a different way from GetBalance. The biggest
+// difference is that GetBalance sums up all unspent TxOuts paying to the
+// wallet, while this sums up both spent and unspent TxOuts paying to the
+// wallet, and then subtracts the values of TxIns spending from the wallet. This
+// also has fewer restrictions on which unconfirmed transactions are considered
+// trusted.
+CAmount CWallet::JSONGetLegacyBalance(const isminefilter& filter, int minDepth, const std::string* account) const
+{
+    LOCK2(cs_main, cs_wallet);
+
+    CAmount balance = 0;
+    for (const auto& entry : mapWallet) {
+        const CWalletTx& wtx = entry.second;
+        const int depth = wtx.GetDepthInMainChain();
+        if (depth < 0 || !CheckFinalTx(*wtx.tx) || wtx.GetBlocksToMaturity() > 0) {
+            continue;
+        }
+
+        // Loop through tx outputs and add incoming payments. For outgoing txs,
+        // treat change outputs specially, as part of the amount debited.
+        CAmount debit = wtx.GetDebit(filter);
+        const bool outgoing = debit > 0;
+        for (const CTxOut& out : wtx.tx->vout) {
+			/*
+            if (outgoing && IsChange(out)) {
+                debit -= out.nValue;
+            } else if (IsMine(out) & filter && depth >= minDepth && (!account || *account == GetAccountName(out.scriptPubKey))) {
+                balance += out.nValue;
+            }
+			*/
+			
+			bool isMyAddress = false;
+			CTxDestination address;
+			std::cout << "JSONGetLegacyBalance 111111" << std::endl;
+			if(ExtractDestination(out.scriptPubKey, address)) {
+				std::cout << " #### address ### " << CBitcoinAddress(address).ToString() << std::endl;
+				isMyAddress = CBitcoinAddress(address).ToString() == *account;
+			}
+			
+			if (outgoing && IsChange(out)) {
+                debit -= out.nValue;
+				//} else if (IsMine(out) & filter && depth >= minDepth && isMyAddress == true) {
+			} else if (depth >= minDepth && isMyAddress == true) {
+                balance += out.nValue;
+			}
+        }
+
+        // For outgoing txs, subtract amount debited.
+        if (outgoing && (!account || *account == wtx.strFromAccount)) {
+            balance -= debit;
+        }
+    }
+
+    if (account) {
+        balance += CWalletDB(*dbw).GetAccountCreditDebit(*account);
+    }
+
+    return balance;
+}
+
 CAmount CWallet::GetAvailableBalance(const CCoinControl* coinControl) const
 {
     LOCK2(cs_main, cs_wallet);
