@@ -2195,9 +2195,9 @@ CAmount CWallet::JSONGetLegacyBalance(const isminefilter& filter, int minDepth, 
 			
 			bool isMyAddress = false;
 			CTxDestination address;
-			std::cout << "JSONGetLegacyBalance 111111" << std::endl;
+			//std::cout << "JSONGetLegacyBalance 111111" << std::endl;
 			if(ExtractDestination(out.scriptPubKey, address)) {
-				std::cout << " #### address ### " << CBitcoinAddress(address).ToString() << std::endl;
+				//std::cout << " #### address ### " << CBitcoinAddress(address).ToString() << std::endl;
 				isMyAddress = CBitcoinAddress(address).ToString() == *account;
 			}
 			
