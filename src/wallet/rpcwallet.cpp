@@ -1468,12 +1468,15 @@ void ListTransactions(CWallet* const pwallet, const CWalletTx& wtx, const std::s
 
     wtx.GetAmounts(listReceived, listSent, nFee, strSentAccount, filter);
 
-    bool fAllAccounts = (strAccount == std::string("*"));
+    //bool fAllAccounts = (strAccount == std::string("*"));
     bool involvesWatchonly = wtx.IsFromMe(ISMINE_WATCH_ONLY);
 
     // Sent
-    if ((!listSent.empty() || nFee != 0) && (fAllAccounts || strAccount == strSentAccount))
+    //if ((!listSent.empty() || nFee != 0) && (fAllAccounts || strAccount == strSentAccount))
+	 if ((!listSent.empty() || nFee != 0))
     {
+		CBitcoinAddress addr;
+		std::string userAddress = strAccount;
         for (const COutputEntry& s : listSent)
         {
             UniValue entry(UniValue::VOBJ);
@@ -1481,6 +1484,13 @@ void ListTransactions(CWallet* const pwallet, const CWalletTx& wtx, const std::s
 			MaybePushAddress(entry, s.destination);
 			if (!entry.exists("address")) {
 				continue;
+			}
+			
+			addr.Set(s.destination);
+			if (entry.exists("address")) {
+				if (addr.ToString() != userAddress) {
+					continue;
+				}
 			}
 			
             if (involvesWatchonly || (::IsMine(*pwallet, s.destination) & ISMINE_WATCH_ONLY)) {
@@ -1505,19 +1515,29 @@ void ListTransactions(CWallet* const pwallet, const CWalletTx& wtx, const std::s
     // Received
     if (listReceived.size() > 0 && wtx.GetDepthInMainChain() >= nMinDepth)
     {
+		CBitcoinAddress addr;
+		std::string userAddress = strAccount;
         for (const COutputEntry& r : listReceived)
         {
             std::string account;
             if (pwallet->mapAddressBook.count(r.destination)) {
                 account = pwallet->mapAddressBook[r.destination].name;
             }
-            if (fAllAccounts || (account == strAccount))
+            //if (fAllAccounts || (account == strAccount))
+			if (true)
             {
                 UniValue entry(UniValue::VOBJ);
 				
 				MaybePushAddress(entry, r.destination);
 				if (!entry.exists("address")) {
 					continue;
+				}
+				
+				addr.Set(r.destination);
+				if (entry.exists("address")) {
+					if (addr.ToString() != userAddress) {
+						continue;
+					}
 				}
 				
                 if (involvesWatchonly || (::IsMine(*pwallet, r.destination) & ISMINE_WATCH_ONLY)) {
@@ -1637,7 +1657,8 @@ UniValue listtransactions(const JSONRPCRequest& request)
 
     LOCK2(cs_main, pwallet->cs_wallet);
 
-    std::string strAccount = "*";
+    //std::string strAccount = "*";
+	std::string strAccount;
     if (!request.params[0].isNull())
         strAccount = request.params[0].get_str();
     int nCount = 10;
