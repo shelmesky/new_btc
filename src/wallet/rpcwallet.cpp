@@ -1477,11 +1477,17 @@ void ListTransactions(CWallet* const pwallet, const CWalletTx& wtx, const std::s
         for (const COutputEntry& s : listSent)
         {
             UniValue entry(UniValue::VOBJ);
+			
+			MaybePushAddress(entry, s.destination);
+			if (!entry.exists("address")) {
+				continue;
+			}
+			
             if (involvesWatchonly || (::IsMine(*pwallet, s.destination) & ISMINE_WATCH_ONLY)) {
                 entry.push_back(Pair("involvesWatchonly", true));
             }
             entry.push_back(Pair("account", strSentAccount));
-            MaybePushAddress(entry, s.destination);
+            //MaybePushAddress(entry, s.destination);
             entry.push_back(Pair("category", "send"));
             entry.push_back(Pair("amount", ValueFromAmount(-s.amount)));
             if (pwallet->mapAddressBook.count(s.destination)) {
@@ -1508,11 +1514,17 @@ void ListTransactions(CWallet* const pwallet, const CWalletTx& wtx, const std::s
             if (fAllAccounts || (account == strAccount))
             {
                 UniValue entry(UniValue::VOBJ);
+				
+				MaybePushAddress(entry, r.destination);
+				if (!entry.exists("address")) {
+					continue;
+				}
+				
                 if (involvesWatchonly || (::IsMine(*pwallet, r.destination) & ISMINE_WATCH_ONLY)) {
                     entry.push_back(Pair("involvesWatchonly", true));
                 }
                 entry.push_back(Pair("account", account));
-                MaybePushAddress(entry, r.destination);
+                //MaybePushAddress(entry, r.destination);
                 if (wtx.IsCoinBase())
                 {
                     if (wtx.GetDepthInMainChain() < 1)
