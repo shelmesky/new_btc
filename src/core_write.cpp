@@ -15,6 +15,7 @@
 #include "util.h"
 #include "utilmoneystr.h"
 #include "utilstrencodings.h"
+#include "validation.h"
 
 UniValue ValueFromAmount(const CAmount& amount)
 {
@@ -153,6 +154,47 @@ void ScriptPubKeyToUniv(const CScript& scriptPubKey,
     out.pushKV("addresses", a);
 }
 
+// get vin transaction address from vin tx id
+bool GetTxOutAddress(const std::string& strHexTx, int64_t voutIndex, UniValue& out)  {
+	std::cout << strHexTx << std::endl;
+	CMutableTransaction mtx;
+	if (!DecodeHexTx(mtx, strHexTx, false)) {
+		std::cout << "000000 Tx Decode failed" << std::endl;
+		return false;
+	}
+	
+	CTransaction tx = CTransaction(std::move(mtx));
+	std::vector<CTxDestination> addresses;
+	txnouttype type;
+    int nRequired;
+	unsigned int nIndex = (unsigned int)voutIndex;
+	
+	
+	std::cout << "111111" << std::endl;
+	
+	for (unsigned int i = 0; i < tx.vout.size(); i++) {
+		if (nIndex != i) {
+			std::cout << "not match index" << std::endl;
+			continue;
+		}
+		const CTxOut& txout = tx.vout[i];
+		if (!ExtractDestinations(txout.scriptPubKey, type, addresses, nRequired)) {
+			out.pushKV("type", GetTxnOutputType(type));
+			std::cout << "222222 type: " << GetTxnOutputType(type) << std::endl;
+			return false;
+		}
+		out.pushKV("value", ValueFromAmount(txout.nValue));
+		UniValue a(UniValue::VARR);
+		for ( const CTxDestination& addr : addresses) {
+			a.push_back(CBitcoinAddress(addr).ToString());
+			std::cout << "333333 address: " << CBitcoinAddress(addr).ToString() << std::endl;
+		}
+		out.pushKV("addresses", a);
+	}
+	
+	return false;
+}
+
 void TxToUniv(const CTransaction& tx, const uint256& hashBlock, UniValue& entry, bool include_hex, int serialize_flags)
 {
     entry.pushKV("txid", tx.GetHash().GetHex());
@@ -174,6 +216,17 @@ void TxToUniv(const CTransaction& tx, const uint256& hashBlock, UniValue& entry,
             UniValue o(UniValue::VOBJ);
             o.pushKV("asm", ScriptToAsmStr(txin.scriptSig, true));
             o.pushKV("hex", HexStr(txin.scriptSig.begin(), txin.scriptSig.end()));
+			
+			/*
+			// get from address of vin transaction
+			CTransactionRef txTemp;
+			uint256 hashBlock;
+			if (GetTransaction(txin.prevout.hash, txTemp, Params().GetConsensus(), hashBlock, true)) {
+				EncodeHexTx(*txTemp, 0);
+				GetTxOutAddress(EncodeHexTx(*txTemp, 0), (int64_t)txin.prevout.n, o);
+			}
+			*/
+			
             in.pushKV("scriptSig", o);
             if (!tx.vin[i].scriptWitness.IsNull()) {
                 UniValue txinwitness(UniValue::VARR);
